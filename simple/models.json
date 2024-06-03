@@ -4,7 +4,7 @@
         "indices": [0, 1, 2, 0, 2, 3],
         "name": "wooden_board",
         "textures": [
-          "wood.png"
+          "wood"
         ],
         "vertices": {
           "attributes": [
@@ -47,6 +47,7 @@
           },
           "layout": [
             "positions",
+            "texcoords",
             "colors"
           ],
           "total": 4

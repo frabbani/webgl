@@ -58,17 +58,8 @@ function createAttributes(dataVertices) {
         console.log("    . type: ", a.type);
         console.log("    . offset: ", a.offset);
     }
-
-    // console.log("    + attributes:");
-    // for (const [k, v] of Object.entries(dataAttributes)) {
-    //     console.log( "")
-    //     for (const [kk, vv] of Object.entries(v)) {
-    //         console.log("        *  " + `${kk}: ${vv}`);
-    //     }
-    // }
     return attributes;
 }
-
 
 function addModel(data) {
     var model = {};
@@ -163,19 +154,20 @@ function addModel(data) {
         }
     }*/
 
+
     var source = new DataView(model.vertex_data);
-    var numFloats = model.vertex_stride / 4; 
-    var ps = [];
+    var numUint32s = model.vertex_stride / 4;
+    var uint32s = [];
     var n = 0;
-    for( var i = 0; i < model.num_vertices; i++ ){
+    for (var i = 0; i < model.num_vertices; i++) {
         var o = i * model.vertex_stride;
-        for( var j = 0; j < numFloats; j++ )
-            ps[n++] = source.getFloat32(o + j * 4);
+        for (var j = 0; j < numUint32s; j++)
+            uint32s[n++] = source.getUint32(o + j * 4);
     }
 
     var vbo = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(ps), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(uint32s), gl.STATIC_DRAW);
     model["vbo"] = vbo;
 
     var ibo = gl.createBuffer();
@@ -254,6 +246,87 @@ loader.enableModelAttribute = function (model, index, loc) {
         gl.vertexAttribPointer(loc, a.size, a.type, a.normalized, model.vertex_stride, a.offset);
         // TODO: vertexAttribIPointer
     }
+
+}
+
+var textures = {};
+
+function isPowerOf2(value) {
+    return (value & (value - 1)) === 0;
+}
+
+loader.loadTexture = function (name, url) {
+    if (typeof name === 'undefined' || url === 'undefined')
+        return;
+
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    // Because images have to be downloaded over the internet
+    // they might take a moment until they are ready.
+    // Until then put a single pixel in the texture so we can
+    // use it immediately. When the image has finished downloading
+    // we'll update the texture with the contents of the image.
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const width = 1;
+    const height = 1;
+    const border = 0;
+    const srcFormat = gl.RGBA;
+    const srcType = gl.UNSIGNED_BYTE;
+    const pixel = new Uint8Array([255, 0, 255, 255]); // magenta (r,g,b,a)
+    gl.texImage2D(
+        gl.TEXTURE_2D,
+        level,
+        internalFormat,
+        width,
+        height,
+        border,
+        srcFormat,
+        srcType,
+        pixel,
+    );
+    textures[name] = texture;
+    console.log("created texture '" + name + "' from url '" + url + "'");
+
+    const image = new Image();
+    image.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            level,
+            internalFormat,
+            srcFormat,
+            srcType,
+            image,
+        );
+
+        // WebGL1 has different requirements for power of 2 images
+        // vs. non power of 2 images so check if the image is a
+        // power of 2 in both dimensions.
+        if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+            // Yes, it's a power of 2. Generate mips.
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.GL_LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.GL_LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIP_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR);
+        } else {
+            // No, it's not a power of 2. Turn off mips and set
+            // wrapping to clamp to edge
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.GL_LINEAR);
+        }
+    };
+    image.src = url;
+
+
+    return texture;
+}
+
+loader.bindTexture = function (name, unit) {
+    if (typeof textures["name"] === 'undefined')
+        return;
 
 }
 /*

@@ -26,6 +26,15 @@ function is_vec4(a) {
   return false;
 }
 
+mathlib.vec3 = function () {
+  return [0.0, 0.0, 0.0];
+}
+
+mathlib.vec3set = function (x, y, z) {
+  if (is_scalar(x) && is_scalar(y) && is_scalar(z))
+    return [x, y, z];
+  return mathlib.vec3();
+}
 
 mathlib.vec4 = function () {
   return [0.0, 0.0, 0.0, 0.0];

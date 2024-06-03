@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+
+<body>
+  <canvas width="512" height="512" id="glCanvas"></canvas>
+  <script type="text/javascript" src="./loader.js"></script>
+  <script type="text/javascript" src="./mathlib.js"></script>
+  <script>
+
+    const DT_MS = 16.6666;
+    const SECS_PER = (DT_MS / 1000.0);
+    mathlib.mat4();
+    mathlib.mat4ident();
+    mathlib.mat4mul();
+    mathlib.mat4rot();
+    mathlib.mat4mov();
+    mathlib.mat4persp();
+    mathlib.mat4ortho();
+    mathlib.mat4flat();
+
+    loader.loadModels();
+    loader.getModel();
+    loader.validModel();
+    loader.enableModelAttribute();
+
+    var canvas = document.getElementById('glCanvas');
+    var gl = canvas.getContext('webgl2');
+
+    var vbo = gl.createBuffer();
+    var vs = gl.createShader(gl.VERTEX_SHADER);
+    var fs = gl.createShader(gl.FRAGMENT_SHADER);
+    var sh = gl.createProgram();
+    var angle = 0.0;
+
+    function setupGL() {
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.BACK);
+      gl.frontFace(gl.CCW);
+      gl.enable(gl.DEPTH_TEST);
+
+      gl.clearColor(0.1, 0.1, 0.2, 1.0);
+      gl.clearDepth(1.0);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    function init() {
+      setupGL();
+      loader.loadModels("http://192.168.68.89:9876/models.json");
+
+      //var verts = [-0.5, -0.5, +1.0, +0.5, -0.5, +1.0, 0.0, 0.5, +1.0];
+      var verts = [
+        -0.5, 0, -0.5,
+        +0.5, 0, -0.5,
+        +0.0, 0, +0.5,
+      ];
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      var vertCode =
+        'attribute vec3 vtx_p;' +
+        'attribute vec4 vtx_c;' +
+        'uniform mat4   PVW; ' +
+        'varying vec4   var_c; ' +
+        'void main() {' +
+        ' gl_Position = PVW * vec4(vtx_p, 1.0);' +
+        ' var_c = vtx_c;' +
+        '}';
+      gl.shaderSource(vs, vertCode);
+      gl.compileShader(vs);
+
+      var compiled = gl.getShaderParameter(vs, gl.COMPILE_STATUS);
+      console.log('vs compile status: ' + compiled);
+      if (!compiled)
+        console.log(' - log: ' + gl.getShaderInfoLog(vs));
+
+      var fragCode =
+        'precision mediump float;' +
+        'varying vec4   var_c;' +
+        'void main() {' +
+        ' gl_FragColor = vec4(var_c);' +
+        '}';
+      gl.shaderSource(fs, fragCode);
+      gl.compileShader(fs);
+      compiled = gl.getShaderParameter(fs, gl.COMPILE_STATUS);
+      console.log('fs compile status: ' + compiled);
+      if (!compiled)
+        console.log(' - log: ' + gl.getShaderInfoLog(fs));
+
+      gl.attachShader(sh, vs);
+      gl.attachShader(sh, fs);
+      gl.linkProgram(sh);
+      gl.useProgram(sh);
+    }
+
+    function draw() {
+      gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
+
+      gl.useProgram(sh);
+      var P = mathlib.mat4persp(1.0, 90.0 * Math.PI / 180.0, 0.01, 3000.0);
+      var V = mathlib.mat4ident();
+      var W = mathlib.mat4mul(mathlib.mat4mov([0, 2, 0]), mathlib.mat4rot(angle * Math.PI / 180.0, 'z'));
+      var PVW = mathlib.mat4mul(P, mathlib.mat4mul(V, W));
+      loc = gl.getUniformLocation(sh, "PVW");
+      gl.uniformMatrix4fv(loc, false, mathlib.mat4flat(PVW));
+
+      var model = loader.getModel("wooden_board");
+      if (loader.validModel(model)) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, model['vbo']);
+
+        var loc = gl.getAttribLocation(sh, "vtx_p");
+        loader.enableModelAttribute(model, "positions", loc);
+        var loc = gl.getAttribLocation(sh, "vtx_c");
+        loader.enableModelAttribute(model, "colors", loc);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model['ibo']);
+        gl.drawElements(gl.TRIANGLES, model.num_indices, gl.UNSIGNED_SHORT, 0);
+
+      }
+      else {
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        var loc = gl.getAttribLocation(sh, "vtx_p");
+        gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+
+        gl.enableVertexAttribArray(loc);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+    }
+
+    var frameNo = 0;
+    function step() {
+
+      angle += (360 / 10) * SECS_PER;
+      frameNo++;
+      //console.log( "frame: " + frameNo.toString() );
+    }
+
+    function run() {
+      step();
+      draw();
+    };
+
+    init();
+    setInterval(run, DT_MS);
+
+  </script>
+</body>
+
+</html>

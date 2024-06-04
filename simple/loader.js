@@ -286,8 +286,8 @@ loader.loadTexture = function (name, url) {
         srcType,
         pixel,
     );
+
     textures[name] = texture;
-    console.log("created texture '" + name + "' from url '" + url + "'");
 
     const image = new Image();
     image.onload = () => {
@@ -300,34 +300,28 @@ loader.loadTexture = function (name, url) {
             srcType,
             image,
         );
+        console.log("loaded texture '" + name + "' from url '" + url + "'");
+        // NOTE: textures need to be POT to work on my machine
 
-        // WebGL1 has different requirements for power of 2 images
-        // vs. non power of 2 images so check if the image is a
-        // power of 2 in both dimensions.
-        if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-            // Yes, it's a power of 2. Generate mips.
-            gl.generateMipmap(gl.TEXTURE_2D);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.GL_LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.GL_LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIP_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR);
-        } else {
-            // No, it's not a power of 2. Turn off mips and set
-            // wrapping to clamp to edge
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.GL_LINEAR);
-        }
+        // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        // gl.generateMipmap(gl.TEXTURE_2D);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.GL_LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
     };
     image.src = url;
-
-
-    return texture;
 }
 
 loader.bindTexture = function (name, unit) {
-    if (typeof textures["name"] === 'undefined')
+    if( typeof name === 'undefined')
         return;
-
+    var texture = textures[name];
+    if (typeof texture === 'undefined')
+        return;
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
 }
 /*
     // dataview example

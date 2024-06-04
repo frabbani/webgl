@@ -10,6 +10,7 @@
 attribute vec3 vtx_p;
 attribute vec2 vtx_t;
 attribute vec4 vtx_c;
+
 uniform mat4 PVW;
 
 varying vec4 var_c;
@@ -53,6 +54,7 @@ void main() {
     loader.enableModelAttribute();
 
     loader.loadTexture();
+    loader.bindTexture();
 
     var canvas = document.getElementById('glCanvas');
     var gl = canvas.getContext('webgl2');
@@ -77,7 +79,7 @@ void main() {
     function init() {
       setupGL();
       loader.loadModels("http://192.168.68.89:9876/models.json");
-      loader.loadTexture("wood", "http://192.168.68.89:9876/wood.png");
+      loader.loadTexture("ranger", "http://192.168.68.89:9876/player.bmp");
 
       //var verts = [-0.5, -0.5, +1.0, +0.5, -0.5, +1.0, 0.0, 0.5, +1.0];
       var verts = [
@@ -109,6 +111,8 @@ void main() {
       gl.attachShader(sh, fs);
       gl.linkProgram(sh);
       gl.useProgram(sh);
+      gl.uniform1i(gl.getUniformLocation(sh, "tex"), 0);
+
     }
 
     function draw() {
@@ -117,19 +121,21 @@ void main() {
       gl.useProgram(sh);
       var P = mathlib.mat4persp(1.0, 75.0 * Math.PI / 180.0, 0.01, 3000.0);
       var V = mathlib.mat4ident();
-      var W = mathlib.mat4mul(mathlib.mat4mov([0, 2, 0]), mathlib.mat4rot(angle * Math.PI / 180.0, 'z'));
+      var W = mathlib.mat4mul(mathlib.mat4mov([0, 80, 0]), mathlib.mat4rot(angle * Math.PI / 180.0, 'z'));
       var PVW = mathlib.mat4mul(P, mathlib.mat4mul(V, W));
       loc = gl.getUniformLocation(sh, "PVW");
       gl.uniformMatrix4fv(loc, false, mathlib.mat4flat(PVW));
 
-      var model = loader.getModel("wooden_board");
+      loader.bindTexture( "ranger", 0);
+
+      var model = loader.getModel("ranger");
       if (loader.validModel(model)) {
         gl.bindBuffer(gl.ARRAY_BUFFER, model['vbo']);
 
         var loc = gl.getAttribLocation(sh, "vtx_p");
         loader.enableModelAttribute(model, "positions", loc);
-        loc = gl.getAttribLocation(sh, "vtx_c");
-        loader.enableModelAttribute(model, "colors", loc);
+        //loc = gl.getAttribLocation(sh, "vtx_c");
+        // loader.enableModelAttribute(model, "colors", loc);
         loc = gl.getAttribLocation(sh, "vtx_t");
         loader.enableModelAttribute(model, "texcoords", loc);
 

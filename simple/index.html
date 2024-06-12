@@ -44,6 +44,7 @@ void main() {
     mathlib.mat4mul();
     mathlib.mat4rot();
     mathlib.mat4mov();
+    mathlib.mat4view();
     mathlib.mat4persp();
     mathlib.mat4ortho();
     mathlib.mat4flat();
@@ -78,8 +79,8 @@ void main() {
 
     function init() {
       setupGL();
-      loader.loadModels("http://192.168.68.89:9876/models.json");
-      loader.loadTexture("ranger", "http://192.168.68.89:9876/player.bmp");
+      loader.loadModels("http://192.168.68.90:9876/models.json");
+      loader.loadTexture("ranger", "http://192.168.68.90:9876/player.bmp");
 
       //var verts = [-0.5, -0.5, +1.0, +0.5, -0.5, +1.0, 0.0, 0.5, +1.0];
       var verts = [
@@ -126,7 +127,7 @@ void main() {
       loc = gl.getUniformLocation(sh, "PVW");
       gl.uniformMatrix4fv(loc, false, mathlib.mat4flat(PVW));
 
-      loader.bindTexture( "ranger", 0);
+      loader.bindTexture("ranger", 0);
 
       var model = loader.getModel("ranger");
       if (loader.validModel(model)) {
@@ -155,7 +156,6 @@ void main() {
 
     var frameNo = 0;
     function step() {
-
       angle += (360 / 10) * SECS_PER;
       frameNo++;
       //console.log( "frame: " + frameNo.toString() );

@@ -36,6 +36,14 @@ mathlib.vec3set = function (x, y, z) {
   return mathlib.vec3();
 }
 
+mathlib.vec3dot = function (u, v) {
+  if (is_vec3(u) && is_vec3(v))
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+  return 0.0;
+}
+
+
+
 mathlib.vec4 = function () {
   return [0.0, 0.0, 0.0, 0.0];
 }
@@ -48,7 +56,7 @@ mathlib.vec4set = function (x, y, z, w) {
 
 mathlib.vec4dot = function (u, v) {
   if (is_vec4(u) && is_vec4(v))
-    return u[0] * v[0] + u[0] * v[0] + u[0] * v[0] + u[0] * v[0];
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2] + u[3] * v[3];
   return 0.0;
 }
 
@@ -173,6 +181,50 @@ mathlib.mat4rot = function (rads, axisType) {
     m[1][1] = co;
   }
   return m;
+}
+
+
+mathlib.mat4view = function (m) {
+  var r = mathlib.mat4ident();
+  if (is_mat4(m)) {
+
+    var o =[];
+    o[0] = m[0][3];
+    o[1] = m[1][3];
+    o[2] = m[2][3];
+
+    var x =[];
+    x[0] = m[0][0];
+    x[1] = m[1][0];
+    x[2] = m[2][0];
+
+    var y =[];
+    y[0] = m[0][1];
+    y[1] = m[1][1];
+    y[2] = m[2][1];
+    
+    var z =[];
+    z[0] = m[0][2];
+    z[1] = m[1][2];
+    z[2] = m[2][2];
+
+    r[0][0] = x[0];
+    r[0][1] = x[1];
+    r[0][2] = x[2];
+    r[0][3] = -mathlib.vec3dot( o, x );
+
+    r[1][0] = y[0];
+    r[1][1] = y[1];
+    r[1][2] = y[2];
+    r[1][3] = -mathlib.vec3dot( o, y );
+
+    r[2][0] = z[0];
+    r[2][1] = z[1];
+    r[2][2] = z[2];
+    r[2][3] = -mathlib.vec3dot( o, z );
+  }
+
+  return r;
 }
 
 mathlib.mat4ortho = function (w, h, minDist, maxDist) {

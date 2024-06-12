@@ -1,0 +1,57 @@
+{
+    "models": [
+      {
+        "indices": [0, 1, 2, 0, 2, 3],
+        "name": "wooden_board",
+        "textures": [
+          "wood"
+        ],
+        "vertices": {
+          "attributes": [
+            {
+              "index": "positions",
+              "size": 3,
+              "type": "float"
+            },
+            {
+              "index": "texcoords",
+              "size": 2,
+              "type": "float"
+            },
+            {
+              "index": "colors",
+              "size": 4,
+              "type": "uint8",
+              "normalized": "yes"
+            }
+          ],
+          "data": {
+            "positions": [
+              [-0.5, 0, -0.5],
+              [0.5, 0, -0.5],
+              [0.5, 0, 0.5],
+              [-0.5, 0, 0.5]
+            ],
+            "texcoords": [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 1]
+            ],
+            "colors": [
+              [255, 255, 255, 255],
+              [255, 0, 0, 255],
+              [255, 0, 255, 0],
+              [255, 255, 0, 0]
+            ]
+          },
+          "layout": [
+            "positions",
+            "texcoords",
+            "colors"
+          ],
+          "total": 4
+        }
+      }
+    ]
+  }

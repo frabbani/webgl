@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+
+<body>
+  <canvas width="768" height="768" id="glCanvas"></canvas>
+  <script type="text/javascript" src="./loader.js"></script>
+  <script type="text/javascript" src="./mathlib.js"></script>
+
+  <script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec3 vtx_p;
+attribute vec2 vtx_t;
+attribute vec4 vtx_c;
+
+uniform mat4 PVW;
+
+varying vec4 var_c;
+varying vec2 var_t;
+
+void main() {
+  gl_Position = PVW * vec4(vtx_p, 1.0);
+  var_c = vtx_c;
+  var_t = vtx_t;
+}
+  </script>
+
+  <script id="fragment-shader" type="x-shader/x-fragment">
+precision highp float;
+
+uniform sampler2D tex;
+
+varying vec4   var_c;
+varying vec2   var_t;
+
+void main() {
+  gl_FragColor = texture2D(tex, var_t);
+}
+  </script>
+
+  <script>
+    const DT_MS = 16.6666;
+    const SECS_PER = (DT_MS / 1000.0);
+    mathlib.mat4();
+    mathlib.mat4ident();
+    mathlib.mat4mul();
+    mathlib.mat4rot();
+    mathlib.mat4mov();
+    mathlib.mat4view();
+    mathlib.mat4persp();
+    mathlib.mat4ortho();
+    mathlib.mat4flat();
+
+    loader.loadModels();
+    loader.getModel();
+    loader.validModel();
+    loader.enableModelAttribute();
+
+    loader.loadTexture();
+    loader.bindTexture();
+
+    var canvas = document.getElementById('glCanvas');
+    var gl = canvas.getContext('webgl');
+    var webSocket = new WebSocket("http://192.168.68.90:8910");
+
+    var vbo = gl.createBuffer();
+    var vs = gl.createShader(gl.VERTEX_SHADER);
+    var fs = gl.createShader(gl.FRAGMENT_SHADER);
+    var sh = gl.createProgram();
+    var angle = 0.0;
+    var camYaw = 0.0;
+    var camPitch = 0.0;
+    var text = "";
+
+    webSocket.onopen = (event) => {
+      console.log("socket opened on 'http://192.168.68.90:8910'");
+    };
+
+
+    webSocket.onmessage = (event) => {
+      text = event.data;
+      if (text == "exit") {
+        webSocket.close();
+      }
+      const o = JSON.parse(text);
+      camYaw = o.yaw;
+      camPitch = o.pitch;
+      //console.log("received: " + camYaw + "/" + camPitch);
+    };
+
+    function setupGL() {
+      //gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.BACK);
+      gl.frontFace(gl.CCW);
+      gl.enable(gl.DEPTH_TEST);
+
+      gl.clearColor(0.1, 0.1, 0.2, 1.0);
+      gl.clearDepth(1.0);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    function init() {
+      setupGL();
+      loader.loadModels("http://192.168.68.90:9876/models.json");
+      loader.loadTexture("ranger", "http://192.168.68.90:9876/player.bmp");
+
+      //var verts = [-0.5, -0.5, +1.0, +0.5, -0.5, +1.0, 0.0, 0.5, +1.0];
+      var verts = [
+        -0.5, 0, -0.5,
+        +0.5, 0, -0.5,
+        +0.0, 0, +0.5,
+      ];
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      var vertCode = document.getElementById("vertex-shader").textContent;
+      gl.shaderSource(vs, vertCode);
+      gl.compileShader(vs);
+      var compiled = gl.getShaderParameter(vs, gl.COMPILE_STATUS);
+      console.log('vs compile status: ' + compiled);
+      if (!compiled)
+        console.log(' - log: ' + gl.getShaderInfoLog(vs));
+
+      var fragCode = document.getElementById("fragment-shader").textContent;
+      gl.shaderSource(fs, fragCode);
+      gl.compileShader(fs);
+      compiled = gl.getShaderParameter(fs, gl.COMPILE_STATUS);
+      console.log('fs compile status: ' + compiled);
+      if (!compiled)
+        console.log(' - log: ' + gl.getShaderInfoLog(fs));
+
+      gl.attachShader(sh, vs);
+      gl.attachShader(sh, fs);
+      gl.linkProgram(sh);
+      gl.useProgram(sh);
+      gl.uniform1i(gl.getUniformLocation(sh, "tex"), 0);
+
+    }
+
+    function draw() {
+      gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
+
+      gl.useProgram(sh);
+      var P = mathlib.mat4persp(1.0, 75.0 * Math.PI / 180.0, 0.01, 3000.0);
+      var V = mathlib.mat4view(
+        mathlib.mat4mul(
+          mathlib.mat4rot(camYaw * Math.PI / 180.0, 'z'),
+          mathlib.mat4rot(camPitch * Math.PI / 180.0, 'x')
+        )
+      );
+      var W = mathlib.mat4mul(mathlib.mat4mov([0, 80, 0]), mathlib.mat4rot(angle * Math.PI / 180.0, 'z'));
+      var PVW = mathlib.mat4mul(P, mathlib.mat4mul(V, W));
+      loc = gl.getUniformLocation(sh, "PVW");
+      gl.uniformMatrix4fv(loc, false, mathlib.mat4flat(PVW));
+
+      loader.bindTexture("ranger", 0);
+
+      var model = loader.getModel("ranger");
+      if (loader.validModel(model)) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, model['vbo']);
+
+        var loc = gl.getAttribLocation(sh, "vtx_p");
+        loader.enableModelAttribute(model, "positions", loc);
+        //loc = gl.getAttribLocation(sh, "vtx_c");
+        // loader.enableModelAttribute(model, "colors", loc);
+        loc = gl.getAttribLocation(sh, "vtx_t");
+        loader.enableModelAttribute(model, "texcoords", loc);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model['ibo']);
+        gl.drawElements(gl.TRIANGLES, model.num_indices, gl.UNSIGNED_SHORT, 0);
+
+      }
+      else {
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        var loc = gl.getAttribLocation(sh, "vtx_p");
+        gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+
+        gl.enableVertexAttribArray(loc);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+    }
+
+    var frameNo = 0;
+    function step() {
+      angle += (360 / 10) * SECS_PER;
+      frameNo++;
+      //console.log( "frame: " + frameNo.toString() );
+    }
+
+    function run() {
+      step();
+      draw();
+    };
+
+    init();
+    setInterval(run, DT_MS);
+
+  </script>
+</body>
+
+</html>
